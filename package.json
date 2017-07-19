@@ -23,7 +23,7 @@
     "faye-websocket": "0.9.3",
     "jsonwebtoken": "^7.3.0",
     "promise-polyfill": "^6.0.2",
-    "xmlhttprequest": "romario333/xmlhttprequest"
+    "xmlhttprequest": "romario333/node-XMLHttpRequest"
   },
   "browser": "firebase-browser.js",
   "react-native": "firebase-react-native.js",
