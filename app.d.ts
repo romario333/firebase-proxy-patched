@@ -1,9 +1,32 @@
+/**
+* Copyright 2017 Google Inc.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
 declare namespace firebase {
+  type CompleteFn = ( ) => undefined ;
+
   interface FirebaseError {
     code : string ;
     message : string ;
     name : string ;
     stack ? : string ;
+  }
+
+  interface Observer < V , E > {
+    complete ( ) : any ;
+    error (error : E ) : any ;
+    next (value : V | null ) : any ;
   }
 
   class Promise < T > extends Promise_Instance < T > {
@@ -24,18 +47,24 @@ declare namespace firebase {
     then (onResolve ? : (a : T ) => any , onReject ? : (a : Error ) => any ) : firebase.Thenable < any > ;
   }
 
+  type Unsubscribe = ( ) => undefined ;
+
   interface User extends firebase.UserInfo {
     delete ( ) : firebase.Promise < any > ;
     emailVerified : boolean ;
+    getIdToken (forceRefresh ? : boolean ) : firebase.Promise < any > ;
     getToken (forceRefresh ? : boolean ) : firebase.Promise < any > ;
     isAnonymous : boolean ;
-    link (credential : firebase.auth.AuthCredential ) : firebase.Promise < any > ;
+    linkAndRetrieveDataWithCredential (credential : firebase.auth.AuthCredential ) : firebase.Promise < any > ;
     linkWithCredential (credential : firebase.auth.AuthCredential ) : firebase.Promise < any > ;
+    linkWithPhoneNumber (phoneNumber : string , applicationVerifier : firebase.auth.ApplicationVerifier ) : firebase.Promise < any > ;
     linkWithPopup (provider : firebase.auth.AuthProvider ) : firebase.Promise < any > ;
     linkWithRedirect (provider : firebase.auth.AuthProvider ) : firebase.Promise < any > ;
+    phoneNumber : string | null ;
     providerData : ( firebase.UserInfo | null ) [] ;
-    reauthenticate (credential : firebase.auth.AuthCredential ) : firebase.Promise < any > ;
+    reauthenticateAndRetrieveDataWithCredential (credential : firebase.auth.AuthCredential ) : firebase.Promise < any > ;
     reauthenticateWithCredential (credential : firebase.auth.AuthCredential ) : firebase.Promise < any > ;
+    reauthenticateWithPhoneNumber (phoneNumber : string , applicationVerifier : firebase.auth.ApplicationVerifier ) : firebase.Promise < any > ;
     reauthenticateWithPopup (provider : firebase.auth.AuthProvider ) : firebase.Promise < any > ;
     reauthenticateWithRedirect (provider : firebase.auth.AuthProvider ) : firebase.Promise < any > ;
     refreshToken : string ;
@@ -45,12 +74,14 @@ declare namespace firebase {
     unlink (providerId : string ) : firebase.Promise < any > ;
     updateEmail (newEmail : string ) : firebase.Promise < any > ;
     updatePassword (newPassword : string ) : firebase.Promise < any > ;
+    updatePhoneNumber (phoneCredential : firebase.auth.AuthCredential ) : firebase.Promise < any > ;
     updateProfile (profile : { displayName : string | null , photoURL : string | null } ) : firebase.Promise < any > ;
   }
 
   interface UserInfo {
     displayName : string | null ;
     email : string | null ;
+    phoneNumber : string | null ;
     photoURL : string | null ;
     providerId : string ;
     uid : string ;
@@ -87,35 +118,49 @@ declare namespace firebase.auth {
   interface ActionCodeInfo {
   }
 
+  type AdditionalUserInfo = { profile : Object | null , providerId : string , username ? : string | null } ;
+
+  interface ApplicationVerifier {
+    type : string ;
+    verify ( ) : firebase.Promise < any > ;
+  }
+
   interface Auth {
     app : firebase.app.App ;
     applyActionCode (code : string ) : firebase.Promise < any > ;
     checkActionCode (code : string ) : firebase.Promise < any > ;
     confirmPasswordReset (code : string , newPassword : string ) : firebase.Promise < any > ;
-    createCustomToken (uid : string , developerClaims ? : Object | null ) : string ;
     createUserWithEmailAndPassword (email : string , password : string ) : firebase.Promise < any > ;
     currentUser : firebase.User | null ;
     fetchProvidersForEmail (email : string ) : firebase.Promise < any > ;
     getRedirectResult ( ) : firebase.Promise < any > ;
-    onAuthStateChanged (nextOrObserver : Object , error ? : (a : firebase.auth.Error ) => any , completed ? : ( ) => any ) : ( ) => any ;
+    onAuthStateChanged (nextOrObserver : firebase.Observer < any , any > | ( (a : firebase.User | null ) => any ) , error ? : (a : firebase.auth.Error ) => any , completed ? : firebase.Unsubscribe ) : firebase.Unsubscribe ;
+    onIdTokenChanged (nextOrObserver : firebase.Observer < any , any > | ( (a : firebase.User | null ) => any ) , error ? : (a : firebase.auth.Error ) => any , completed ? : firebase.Unsubscribe ) : firebase.Unsubscribe ;
     sendPasswordResetEmail (email : string ) : firebase.Promise < any > ;
+    setPersistence (persistence : firebase.auth.Auth.Persistence ) : firebase.Promise < any > ;
+    signInAndRetrieveDataWithCredential (credential : firebase.auth.AuthCredential ) : firebase.Promise < any > ;
     signInAnonymously ( ) : firebase.Promise < any > ;
     signInWithCredential (credential : firebase.auth.AuthCredential ) : firebase.Promise < any > ;
     signInWithCustomToken (token : string ) : firebase.Promise < any > ;
     signInWithEmailAndPassword (email : string , password : string ) : firebase.Promise < any > ;
+    signInWithPhoneNumber (phoneNumber : string , applicationVerifier : firebase.auth.ApplicationVerifier ) : firebase.Promise < any > ;
     signInWithPopup (provider : firebase.auth.AuthProvider ) : firebase.Promise < any > ;
     signInWithRedirect (provider : firebase.auth.AuthProvider ) : firebase.Promise < any > ;
     signOut ( ) : firebase.Promise < any > ;
-    verifyIdToken (idToken : string ) : firebase.Promise < any > ;
     verifyPasswordResetCode (code : string ) : firebase.Promise < any > ;
   }
 
   interface AuthCredential {
-    provider : string ;
+    providerId : string ;
   }
 
   interface AuthProvider {
     providerId : string ;
+  }
+
+  interface ConfirmationResult {
+    confirm (verificationCode : string ) : firebase.Promise < any > ;
+    verificationId : string ;
   }
 
   class EmailAuthProvider extends EmailAuthProvider_Instance {
@@ -136,9 +181,9 @@ declare namespace firebase.auth {
     static credential (token : string ) : firebase.auth.AuthCredential ;
   }
   class FacebookAuthProvider_Instance implements firebase.auth.AuthProvider {
-    addScope (scope : string ) : any ;
+    addScope (scope : string ) : firebase.auth.AuthProvider ;
     providerId : string ;
-    setCustomParameters (customOAuthParameters : Object ) : any ;
+    setCustomParameters (customOAuthParameters : Object ) : firebase.auth.AuthProvider ;
   }
 
   class GithubAuthProvider extends GithubAuthProvider_Instance {
@@ -146,9 +191,9 @@ declare namespace firebase.auth {
     static credential (token : string ) : firebase.auth.AuthCredential ;
   }
   class GithubAuthProvider_Instance implements firebase.auth.AuthProvider {
-    addScope (scope : string ) : any ;
+    addScope (scope : string ) : firebase.auth.AuthProvider ;
     providerId : string ;
-    setCustomParameters (customOAuthParameters : Object ) : any ;
+    setCustomParameters (customOAuthParameters : Object ) : firebase.auth.AuthProvider ;
   }
 
   class GoogleAuthProvider extends GoogleAuthProvider_Instance {
@@ -156,9 +201,29 @@ declare namespace firebase.auth {
     static credential (idToken ? : string | null , accessToken ? : string | null ) : firebase.auth.AuthCredential ;
   }
   class GoogleAuthProvider_Instance implements firebase.auth.AuthProvider {
-    addScope (scope : string ) : any ;
+    addScope (scope : string ) : firebase.auth.AuthProvider ;
     providerId : string ;
-    setCustomParameters (customOAuthParameters : Object ) : any ;
+    setCustomParameters (customOAuthParameters : Object ) : firebase.auth.AuthProvider ;
+  }
+
+  class PhoneAuthProvider extends PhoneAuthProvider_Instance {
+    static PROVIDER_ID : string ;
+    static credential (verificationId : string , verificationCode : string ) : firebase.auth.AuthCredential ;
+  }
+  class PhoneAuthProvider_Instance implements firebase.auth.AuthProvider {
+    constructor (auth ? : firebase.auth.Auth | null ) ;
+    providerId : string ;
+    verifyPhoneNumber (phoneNumber : string , applicationVerifier : firebase.auth.ApplicationVerifier ) : firebase.Promise < any > ;
+  }
+
+  class RecaptchaVerifier extends RecaptchaVerifier_Instance {
+  }
+  class RecaptchaVerifier_Instance implements firebase.auth.ApplicationVerifier {
+    constructor (container : any | string , parameters ? : Object | null , app ? : firebase.app.App | null ) ;
+    clear ( ) : any ;
+    render ( ) : firebase.Promise < any > ;
+    type : string ;
+    verify ( ) : firebase.Promise < any > ;
   }
 
   class TwitterAuthProvider extends TwitterAuthProvider_Instance {
@@ -167,10 +232,19 @@ declare namespace firebase.auth {
   }
   class TwitterAuthProvider_Instance implements firebase.auth.AuthProvider {
     providerId : string ;
-    setCustomParameters (customOAuthParameters : Object ) : any ;
+    setCustomParameters (customOAuthParameters : Object ) : firebase.auth.AuthProvider ;
   }
 
-  type UserCredential = { credential : firebase.auth.AuthCredential | null , operationType ? : string | null , user : firebase.User | null } ;
+  type UserCredential = { additionalUserInfo ? : firebase.auth.AdditionalUserInfo | null , credential : firebase.auth.AuthCredential | null , operationType ? : string | null , user : firebase.User | null } ;
+}
+
+declare namespace firebase.auth.Auth {
+  type Persistence = string ;
+  var Persistence : {
+    LOCAL : Persistence ,
+    NONE : Persistence ,
+    SESSION : Persistence ,
+  };
 }
 
 declare namespace firebase.database {
@@ -229,6 +303,7 @@ declare namespace firebase.database {
     key : string | null ;
     onDisconnect ( ) : firebase.database.OnDisconnect ;
     parent : firebase.database.Reference | null ;
+    path : string ;
     push (value ? : any , onComplete ? : (a : Error | null ) => any ) : firebase.database.ThenableReference ;
     remove (onComplete ? : (a : Error | null ) => any ) : firebase.Promise < any > ;
     root : firebase.database.Reference ;
@@ -253,8 +328,8 @@ declare namespace firebase.messaging {
   interface Messaging {
     deleteToken (token : string ) : firebase.Promise < any > | null ;
     getToken ( ) : firebase.Promise < any > | null ;
-    onMessage (nextOrObserver : Object ) : ( ) => any ;
-    onTokenRefresh (nextOrObserver : Object ) : ( ) => any ;
+    onMessage (nextOrObserver : firebase.Observer < any , any > | ( (a : Object ) => any ) ) : firebase.Unsubscribe ;
+    onTokenRefresh (nextOrObserver : firebase.Observer < any , any > | ( (a : Object ) => any ) ) : firebase.Unsubscribe ;
     requestPermission ( ) : firebase.Promise < any > | null ;
     setBackgroundMessageHandler (callback : (a : Object ) => any ) : any ;
     useServiceWorker (registration : any ) : any ;
@@ -339,7 +414,7 @@ declare namespace firebase.storage {
   interface UploadTask {
     cancel ( ) : boolean ;
     catch (onRejected : (a : Error ) => any ) : firebase.Promise < any > ;
-    on (event : firebase.storage.TaskEvent , nextOrObserver ? : null | Object , error ? : ( (a : Error ) => any ) | null , complete ? : ( ( ) => any ) | null ) : Function ;
+    on (event : firebase.storage.TaskEvent , nextOrObserver ? : firebase.Observer < any , any > | null | ( (a : Object ) => any ) , error ? : ( (a : Error ) => any ) | null , complete ? : ( firebase.Unsubscribe ) | null ) : Function ;
     pause ( ) : boolean ;
     resume ( ) : boolean ;
     snapshot : firebase.storage.UploadTaskSnapshot ;
