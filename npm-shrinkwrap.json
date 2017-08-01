@@ -98,9 +98,7 @@
       "resolved": "https://registry.npmjs.org/websocket-extensions/-/websocket-extensions-0.1.1.tgz"
     },
     "xmlhttprequest": {
-      "version": "1.8.0",
-      "from": "xmlhttprequest@>=1.8.0 <2.0.0",
-      "resolved": "https://registry.npmjs.org/xmlhttprequest/-/xmlhttprequest-1.8.0.tgz"
+      "resolved": "github:romario333/node-XMLHttpRequest#d6abed7f17b8690044b6ff719a2fa82a1280fe8e"
     },
     "xtend": {
       "version": "4.0.1",

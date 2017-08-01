@@ -23,7 +23,7 @@
     "faye-websocket": "0.9.3",
     "jsonwebtoken": "^7.3.0",
     "promise-polyfill": "^6.0.2",
-    "xmlhttprequest": "^1.8.0"
+    "xmlhttprequest": "romario333/node-XMLHttpRequest"
   },
   "config": {
     "commitizen": {
